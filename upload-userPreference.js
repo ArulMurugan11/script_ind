@@ -1,13 +1,14 @@
 const fs = require("fs");
 const filePath =
   // '/hubspot-properties-export-properties-export-2022-09-15 (1).xlsx';
-  "/Client Personal Maping & Hubspot Fileds or Questions.xlsx";
+  "/test customer data.xlsx";
 var xlsx = require("node-xlsx");
 var got = require("axios");
 var obj = xlsx.parse(__dirname + filePath); // parses a file
 
-const post = async function (body) {
-  const url = "http://localhost:1337/api/questionnaires";
+//create UserPreference post method
+const postCustomerPreference = async function (body) {
+  const url = "http://localhost:4002/api/customer-preferences/bulk";
   return got({
     url,
     data: {
@@ -22,46 +23,84 @@ const post = async function (body) {
   });
 };
 
+//get user from 4001
+const getUser = async function (params = {}) {
+  const url = "http://localhost:4001/api/users";
+  return got({
+    url,
+    params,
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQiLCJuYW1lIjoiYXJ1bCIsImVtYWlsIjoiYXJ1bG11cnVnYW4uc0BiYWh3YW5jeWJlcnRlay5jb20iLCJpYXQiOjE2Njc0NzkyNjUsImV4cCI6MTY2NzY1MjA2NX0.80AhOpDT4ITgWEKTM5kHMhMxkkRj31HxAEtRpsyVGuc",
+    },
+  });
+};
+const filter = {
+  where: {
+    or: [
+      { phone: "8220908502" },
+      { email: "arulmurugan.s@bahwancybertek.com" },
+    ],
+  },
+};
+
+//create User post method
+const createUser = async function (body) {
+  const url = "http://localhost:4001/api/users/signup/customer";
+  return got({
+    url,
+    data: {
+      data: body,
+    },
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "cred_9LLgcmpVv70r9Snw5cLBLCw2",
+    },
+  });
+};
+
 const data = obj[0].data;
 const promises = [];
-const categoryData = {
-  Dining: 1,
-};
-categoryData["Experience"] = 2;
-categoryData["Luxury Goods"] = 3;
-categoryData["Travel"] = 4;
-categoryData["Special Request"] = 5;
-async function createQuestionnaire(data) {
-  for (let index = 1; index < data.length; index++) {
-    const element = data[index];
-    if (element[5]) {
+// const questions = data[0];
+// for (let index = 4; index < questions.length; index++) {
+//   console.log(hubspotKey[index]);
+// }
+async function createUserPreference(data) {
+  for (let columnIndex = 0; columnIndex < 36; columnIndex++) {
+    for (let rowIndex = 4; rowIndex < data[0].length; rowIndex++) {
+      // columnIndex++;
       const info = {
-        // question: element[1],
-        // questionnaireType: "default_preference",
-        // answerType: element[3] ?? "text",
-        // hubspotKey: element[5],
-        // isActive: true,
-        // category: categoryData[element[2]] ?? 0,
-        customerPreferenceId: 0,
-        question: "string",
-        answers: ["string"],
-        otherAnswer: "string",
+        question: data[0][rowIndex],
+        name: data[columnIndex + 1][1],
+        answers: data[columnIndex + 1][rowIndex], //data 14 data15 data16
+        otherAnswer: ["-2"],
         type: "default_preference",
         userId: 0,
         agentId: 0,
-        createdAt: "2022-11-02T06:32:52.603Z",
-        updatedAt: "2022-11-02T06:32:52.603Z",
         conversationId: 0,
         ticketId: 0,
       };
-      // console.log('info : ', info, index);
-      await post(info);
-      // promises.push(post(info));
-      // }, 300);
+      // columnIndex--;
+      console.log("info : ", info, columnIndex);
     }
   }
+  //   await post(info);
+  // promises.push(post(info));
+  // }, 300);
+  // }
 }
-createQuestionnaire(data);
+
+// use cases
+// const username = getUser({
+//   filter: JSON.stringify(filter),
+// });
+// username.then(function (result) {
+//   console.log(result.data); // "Some User token"
+// });
+createUserPreference(data);
 
 Promise.all(promises)
   .then((resp) => {
