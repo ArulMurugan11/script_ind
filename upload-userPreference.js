@@ -1,7 +1,7 @@
 const fs = require("fs");
 const filePath =
   // '/hubspot-properties-export-properties-export-2022-09-15 (1).xlsx';
-  "/test customer data.xlsx";
+  "/test customer preference.xlsx";
 var xlsx = require("node-xlsx");
 var got = require("axios");
 var obj = xlsx.parse(__dirname + filePath); // parses a file
@@ -22,6 +22,26 @@ const postCustomerPreference = async function (body) {
     },
   });
 };
+//get questionnaires method
+const getQuestionnaire = async function (
+  params = {
+    pagination: {
+      pageSize: 100,
+    },
+  }
+) {
+  const url = "http://localhost:1337/api/questionnaires";
+  return got({
+    url,
+    params,
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization:
+        "Bearer 423332a65b710a0efb420dd22bebffcbf9a5bccd59159a5ee30e2e20895d6e34cca2890225db969769d9183bb81cca306930009af6c5e63022dc5bfde87eca83b55de96efc01de46de5cf5f36f362fb2b23dd989120f1708860dc470f08e5eb85c881ac44170d180eda195ccc465c5dc502ed9e4d118920d8f7fd9d0337834a5",
+    },
+  });
+};
 
 //get user from 4001
 const getUser = async function (params = {}) {
@@ -33,19 +53,10 @@ const getUser = async function (params = {}) {
     headers: {
       "Content-Type": "application/json",
       Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjQiLCJuYW1lIjoiYXJ1bCIsImVtYWlsIjoiYXJ1bG11cnVnYW4uc0BiYWh3YW5jeWJlcnRlay5jb20iLCJpYXQiOjE2Njc0NzkyNjUsImV4cCI6MTY2NzY1MjA2NX0.80AhOpDT4ITgWEKTM5kHMhMxkkRj31HxAEtRpsyVGuc",
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIiLCJuYW1lIjoic2VsdmEiLCJlbWFpbCI6InNlbHZhbmF0aGFhbkBnbWFpbC5jb20iLCJpYXQiOjE2NjczODU4NTUsImV4cCI6MTk4Mjc0NTg1NX0.5Ti-0mdgfriUfT0NCUkSClq82P4jDc4H6FdoTFe9jVE",
     },
   });
 };
-const filter = {
-  where: {
-    or: [
-      { phone: "8220908502" },
-      { email: "arulmurugan.s@bahwancybertek.com" },
-    ],
-  },
-};
-
 //create User post method
 const createUser = async function (body) {
   const url = "http://localhost:4001/api/users/signup/customer";
@@ -69,21 +80,58 @@ const promises = [];
 //   console.log(hubspotKey[index]);
 // }
 async function createUserPreference(data) {
+  console.log("start");
   for (let columnIndex = 0; columnIndex < 36; columnIndex++) {
-    for (let rowIndex = 4; rowIndex < data[0].length; rowIndex++) {
-      // columnIndex++;
+    for (let rowIndex = 10; rowIndex < data[0].length; rowIndex++) {
+      //here i am checking the user is exist or not
+      const userServiceFilter = {
+        where: {
+          or: [
+            { phone: data[columnIndex + 1][3] },
+            { email: data[columnIndex + 1][2] },
+          ],
+          // or: [
+          //   { phone: "8220908502" },
+          //   { email: "arulmurugan.s@bahwancybertek.com" },
+          // ],
+        },
+      };
+      const userExist = await getUser({
+        filter: JSON.stringify(userServiceFilter),
+      });
+
+      //if the user not exist in out db ,here i am creating new user
+      let newCreatedUser;
+      if (!userExist?.data[0]?.length) {
+        const userDetails = {
+          dateOfBirth: data[columnIndex + 1][4],
+          gender: data[columnIndex + 1][5],
+          username: data[columnIndex + 1][1],
+          firstName: data[columnIndex + 1][6],
+          lastName: data[columnIndex + 1][7],
+          email: data[columnIndex + 1][2],
+          phone: data[columnIndex + 1][3],
+          paymentGatewayId: data[columnIndex + 1][8],
+          countryCode: data[columnIndex + 1][9],
+        };
+        newCreatedUser = await createUser(userDetails);
+      }
+
+      //here i am getting all cms questionnaires
+      const questionnaire = await getQuestionnaire();
+      console.log("questionnaire");
+      console.log(questionnaire?.data?.data);
+
+      // constructing payload for create userPreference
       const info = {
         question: data[0][rowIndex],
         name: data[columnIndex + 1][1],
-        answers: data[columnIndex + 1][rowIndex], //data 14 data15 data16
-        otherAnswer: ["-2"],
+        answers: ["-2"],
+        otherAnswer: data[columnIndex + 1][rowIndex], //data[1][10] data[1][11] data[1][12]
         type: "default_preference",
-        userId: 0,
-        agentId: 0,
-        conversationId: 0,
-        ticketId: 0,
+        userId: userExist?.data[0]?.userId ?? newCreatedUser?.userId,
       };
-      // columnIndex--;
+      // postCustomerPreference(info);
       console.log("info : ", info, columnIndex);
     }
   }
