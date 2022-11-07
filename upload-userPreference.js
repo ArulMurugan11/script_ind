@@ -75,12 +75,13 @@ const createUser = async function (body) {
 
 const data = obj[0].data;
 const promises = [];
-// const questions = data[0];
-// for (let index = 4; index < questions.length; index++) {
-//   console.log(hubspotKey[index]);
-// }
 async function createUserPreference(data) {
   console.log("start");
+  //here i am getting all cms questionnaires
+  const questionnaire = await getQuestionnaire();
+  // console.log("questionnaire");
+  // console.log(questionnaire?.data?.data);
+  const questionData = questionnaire?.data?.data;
   for (let columnIndex = 0; columnIndex < 36; columnIndex++) {
     for (let rowIndex = 10; rowIndex < data[0].length; rowIndex++) {
       //here i am checking the user is exist or not
@@ -116,40 +117,30 @@ async function createUserPreference(data) {
         };
         newCreatedUser = await createUser(userDetails);
       }
-
-      //here i am getting all cms questionnaires
-      const questionnaire = await getQuestionnaire();
-      console.log("questionnaire");
-      console.log(questionnaire?.data?.data);
-
+      let questionNumber;
+      questionData.forEach((element) => {
+        const cmsQuestion = element?.attributes?.question;
+        if (cmsQuestion === data[0][rowIndex]) {
+          questionNumber = element?.id;
+        }
+      });
       // constructing payload for create userPreference
-      const info = {
-        question: data[0][rowIndex],
-        name: data[columnIndex + 1][1],
-        answers: ["-2"],
-        otherAnswer: data[columnIndex + 1][rowIndex], //data[1][10] data[1][11] data[1][12]
-        type: "default_preference",
-        userId: userExist?.data[0]?.userId ?? newCreatedUser?.userId,
-      };
-      // postCustomerPreference(info);
-      console.log("info : ", info, columnIndex);
+      if (questionNumber) {
+        const info = {
+          question: String(questionNumber),
+          name: data[columnIndex + 1][1],
+          answers: ["-2"],
+          otherAnswer: String(data[columnIndex + 1][rowIndex]), //data[1][10] data[1][11] data[1][12]
+          type: "default_preference",
+          userId: Number(userExist?.data[0]?.userId ?? newCreatedUser?.userId),
+        };
+        postCustomerPreference(info);
+        // console.log("info : ", info, columnIndex);
+      }
     }
   }
-  //   await post(info);
-  // promises.push(post(info));
-  // }, 300);
-  // }
 }
-
-// use cases
-// const username = getUser({
-//   filter: JSON.stringify(filter),
-// });
-// username.then(function (result) {
-//   console.log(result.data); // "Some User token"
-// });
 createUserPreference(data);
-
 Promise.all(promises)
   .then((resp) => {
     console.log("success");
