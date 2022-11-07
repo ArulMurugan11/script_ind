@@ -1,7 +1,7 @@
 const fs = require("fs");
 const filePath =
   // '/hubspot-properties-export-properties-export-2022-09-15 (1).xlsx';
-  "/test customer preference.xlsx";
+  "/Indulge Client Persona 02 Nov 2022[1].xlsx";
 var xlsx = require("node-xlsx");
 var got = require("axios");
 var obj = xlsx.parse(__dirname + filePath); // parses a file
@@ -11,14 +11,12 @@ const postCustomerPreference = async function (body) {
   const url = "http://localhost:4002/api/customer-preferences/bulk";
   return got({
     url,
-    data: {
-      data: body,
-    },
+    data: body,
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization:
-        "Bearer bbe8727281d96d8bec720d315559d548d4260e23d87ffde674f42f1e323af3befa875beaefd5722a6c9ec030d4aeacc3a3ace232e416469c3f6d4ee9a906350391c79f58bb81bb2be03bac7967bc8fc8b2d752fd3e0d4530bde27a79d3af4e3f35128875f5ea54cbc4aa166cafea751638fa7c0347c5cdece84ef16165a3cce9",
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjIiLCJuYW1lIjoic2VsdmEiLCJlbWFpbCI6InNlbHZhbmF0aGFhbkBnbWFpbC5jb20iLCJpYXQiOjE2NjczODU4NTUsImV4cCI6MTk4Mjc0NTg1NX0.5Ti-0mdgfriUfT0NCUkSClq82P4jDc4H6FdoTFe9jVE",
     },
   });
 };
@@ -62,9 +60,7 @@ const createUser = async function (body) {
   const url = "http://localhost:4001/api/users/signup/customer";
   return got({
     url,
-    data: {
-      data: body,
-    },
+    data: body,
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,13 +72,10 @@ const createUser = async function (body) {
 const data = obj[0].data;
 const promises = [];
 async function createUserPreference(data) {
-  console.log("start");
   //here i am getting all cms questionnaires
   const questionnaire = await getQuestionnaire();
-  // console.log("questionnaire");
-  // console.log(questionnaire?.data?.data);
   const questionData = questionnaire?.data?.data;
-  for (let columnIndex = 0; columnIndex < 36; columnIndex++) {
+  for (let columnIndex = 0; columnIndex < 3; columnIndex++) {
     for (let rowIndex = 10; rowIndex < data[0].length; rowIndex++) {
       //here i am checking the user is exist or not
       const userServiceFilter = {
@@ -91,29 +84,25 @@ async function createUserPreference(data) {
             { phone: data[columnIndex + 1][3] },
             { email: data[columnIndex + 1][2] },
           ],
-          // or: [
-          //   { phone: "8220908502" },
-          //   { email: "arulmurugan.s@bahwancybertek.com" },
-          // ],
         },
       };
       const userExist = await getUser({
         filter: JSON.stringify(userServiceFilter),
       });
-
       //if the user not exist in out db ,here i am creating new user
       let newCreatedUser;
-      if (!userExist?.data[0]?.length) {
+      if (!userExist?.data[0]) {
         const userDetails = {
-          dateOfBirth: data[columnIndex + 1][4],
+          // dateOfBirth: String(data[columnIndex + 1][4]),
+          dateOfBirth: "2022-11-07T02:02:29.712Z",
           gender: data[columnIndex + 1][5],
           username: data[columnIndex + 1][1],
           firstName: data[columnIndex + 1][6],
           lastName: data[columnIndex + 1][7],
           email: data[columnIndex + 1][2],
-          phone: data[columnIndex + 1][3],
+          phone: String(data[columnIndex + 1][3]),
           paymentGatewayId: data[columnIndex + 1][8],
-          countryCode: data[columnIndex + 1][9],
+          countryCode: String("+" + data[columnIndex + 1][9]),
         };
         newCreatedUser = await createUser(userDetails);
       }
@@ -126,16 +115,20 @@ async function createUserPreference(data) {
       });
       // constructing payload for create userPreference
       if (questionNumber) {
+        let customerPreferenceData = [];
         const info = {
           question: String(questionNumber),
-          name: data[columnIndex + 1][1],
           answers: ["-2"],
           otherAnswer: String(data[columnIndex + 1][rowIndex]), //data[1][10] data[1][11] data[1][12]
           type: "default_preference",
-          userId: Number(userExist?.data[0]?.userId ?? newCreatedUser?.userId),
+          userId: Number(
+            userExist?.data[0]?.userId ?? newCreatedUser?.data?.userId
+          ),
         };
-        postCustomerPreference(info);
-        // console.log("info : ", info, columnIndex);
+        customerPreferenceData.push(info);
+        // console.log(customerPreferenceData);
+        postCustomerPreference(customerPreferenceData);
+        // console.log("info : ", customerPreferenceData, columnIndex);
       }
     }
   }
