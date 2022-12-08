@@ -42,6 +42,7 @@ const getQuestionnaire = async function (
     pagination: {
       pageSize: 100,
     },
+    populate: ["options"],
   }
 ) {
   const url = "http://localhost:1337/api/questionnaires";
@@ -75,65 +76,60 @@ const data = obj[0].data;
 const promises = [];
 async function createUserPreference(data) {
   //here i am getting all cms questionnaires
-  for (let columnIndex = 0; columnIndex < 6; columnIndex++) {
-    for (let rowIndex = 9; rowIndex < data[0].length; rowIndex++) {
+  for (let rowIndex = 0; rowIndex < 6; rowIndex++) {
+    for (let columnIndex = 9; columnIndex < data[0].length; columnIndex++) {
       //here i am checking the user is exist or not
       const userServiceFilter = {
         where: {
           or: [
-            { phone: data[columnIndex + 1][3] },
-            { email: data[columnIndex + 1][2] },
+            { phone: data[rowIndex + 1][3] },
+            { email: data[rowIndex + 1][2] },
           ],
         },
       };
       const userExist = await getUser({
         filter: JSON.stringify(userServiceFilter),
       });
-      //   console.log("userExist?data");
-      //   console.log(userExist?.data[0]);
       const questionnaire = await getQuestionnaire();
       const questionData = questionnaire?.data?.data;
-        // console.log("questionData");
-        // console.log(questionData);
       let questionNumber;
       let questionType = "custom_preference";
       let answer;
       let otherAnswerd = "";
       questionData.forEach((element) => {
-        // console.log("here comes");
         const cmsQuestion = element?.attributes?.question;
+        const cmsOptions = element?.attributes?.options;
         const oldAnswerType = element?.attributes?.answerType;
-        // console.log(cmsQuestion);
-        // console.log(oldAnswerType);
-        if (cmsQuestion === data[0][rowIndex]) {
+        if (cmsQuestion === data[0][columnIndex]) {
           questionNumber = element?.id;
           questionType = "default_preference";
-
           switch (oldAnswerType) {
             case "multi":
-              allOptions = cmsQuestion?.options;
-              each(allOptions, (option) => {
-                if (option.label === String(data[columnIndex + 1][rowIndex])) {
+              cmsOptions.forEach((option) => {
+                if (option.label === String(data[rowIndex + 1][columnIndex])) {
                   answer = [`${String(option.id)}`];
                 }
               });
               break;
             case "single":
-              answer = [`${String(cmsQuestion?.options[0]?.id)}`];
+              answer = [`${String(cmsOptions[0]?.id)}`];
               if (
-                cmsQuestion?.options[1]?.label ===
-                String(data[columnIndex + 1][rowIndex])
+                cmsOptions[1]?.label === String(data[rowIndex + 1][columnIndex])
               ) {
-                answer = [`${String(cmsQuestion?.options[1]?.id)}`];
+                answer = [`${String(cmsOptions[1]?.id)}`];
               }
               break;
             case "text":
               answer = ["-2"];
-              otherAnswerd = String(data[columnIndex + 1][rowIndex]);
+              otherAnswerd = String(data[rowIndex + 1][columnIndex]);
               break;
             case "date":
               answer = ["-3"];
-              otherAnswerd = String(data[columnIndex + 1][rowIndex]);
+              otherAnswerd = new Date(
+                (String(data[rowIndex + 1][columnIndex]) - (25567 + 2)) *
+                  86400 *
+                  1000
+              );
               break;
             default:
               break;
@@ -142,7 +138,7 @@ async function createUserPreference(data) {
       });
       if (!questionNumber) {
         const customerPreferenceInfo = {
-          question: data[0][rowIndex],
+          question: data[0][columnIndex],
           questionnaireType: questionType,
           answerType: "text",
           // hubspotKey: element[5],
@@ -157,7 +153,7 @@ async function createUserPreference(data) {
 
       // constructing payload for create userPreference
       let customerPreferenceData = [];
-      if (data[columnIndex + 1][rowIndex]) {
+      if (data[rowIndex + 1][columnIndex]) {
         // here i am checking the otherAnswer field is not empty
         const info = {
           question: String(questionNumber),
@@ -169,7 +165,7 @@ async function createUserPreference(data) {
         customerPreferenceData.push(info);
         // console.log(customerPreferenceData);
         // postCustomerPreference(customerPreferenceData);
-        console.log("info : ", customerPreferenceData, columnIndex);
+        console.log("info : ", customerPreferenceData, rowIndex);
       }
     }
   }
