@@ -157,15 +157,15 @@ async function createUserPreference(data) {
         // here i am checking the otherAnswer field is not empty
         const info = {
           question: String(questionNumber),
-          answers: answer,
-          otherAnswer: otherAnswerd, //data[1][9] data[1][10] data[1][11]
+          answers: answer ?? ["-2"],
+          otherAnswer: otherAnswerd ?? String(data[columnIndex + 1][rowIndex]), //data[1][9] data[1][10] data[1][11]
           type: questionType,
           userId: Number(userExist?.data[0]?.userId),
         };
         customerPreferenceData.push(info);
         // console.log(customerPreferenceData);
-        // postCustomerPreference(customerPreferenceData);
-        console.log("info : ", customerPreferenceData, rowIndex);
+        postCustomerPreference(customerPreferenceData);
+        // console.log("info : ", customerPreferenceData, rowIndex);
       }
     }
   }
